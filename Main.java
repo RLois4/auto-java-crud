@@ -1,28 +1,3 @@
-/*
- *                                                ___         GITHUB: https://github.com/rlois4
- *                                            _-¨ o o\        Author: Renato Lóis Marcondes da Silva
- *                        __--------__     _-¨\_    |        Description: Simple tool to generate java project
- *                    _--¨     ____   ¨-_-¨      ¨¨-| 
- *              _-¨-¨     _-¨___ \  _-¨     _---_  /
- *  __        __-¨        _-¨ O -_|¨     _-¨|  \| |
- * |  ¨¨¨---___/             __--¨     _-¨  \| / \|
- * \  _____                    /¨¨   _-     _-¨
- *  \  ¨--_¨¨                 /    _-¨     /
- *   ¨-__                         /       /
- *       \_- __                  /       /
- *       /     \                 |_----_ |
- *  __--¨      |_                |__-_ \¨-_
- *                                \   \  \ \
- *                                 ¨-_ \  \ |
- *                                    \ ¨ /|--|\
- *                          __         ¨-/ |__| \
- *                            ¨¨¨--___         _/
- *                            _---¨¨  ¨¨¨-----¨
- *                         -¨
- *  
-*/
-
-
 
 
 
@@ -32,6 +7,9 @@ import java.util.List;
 import java.util.ArrayList;
 
 import java.io.File;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 
 class Attribute {
   private String type;
@@ -149,6 +127,7 @@ public class Main {
     String projectName = sc.nextLine();
     if(projectName.equals("")) projectName = "newProject";
 
+    List<ModelClass> Classes = new ArrayList<>();
 
     System.out.println("-------------  Enter the classes you need:  ---------------");
     System.out.println("---   The script will generate the class, attributes,   ---");
@@ -159,14 +138,12 @@ public class Main {
     System.out.println("Example: ");
     System.out.println("> Users: String name, int id");
     System.out.println("> Book: int pages, String isbn, String tittle");
-    System.out.println("> 0\n\n");
+    System.out.println("> 0");
+    System.out.println("-----------------------------------------------------------\n");
+    
 
     int count = 0;
     while(true) {
-
-      
-
-      
       System.out.print("> ");
       String input = sc.nextLine();
         
@@ -196,6 +173,7 @@ public class Main {
         }
 
         newClass.addAttr(attrSplitted[0], attrSplitted[1]);
+        Classes.add(newClass);
       }
 
       if(invalidAttributes) {
@@ -207,7 +185,10 @@ public class Main {
 
     if(count == 0) {
       System.err.println("Error: no class provided as input");
+      sc.close();
+      return;
     }
+
 
 
 
