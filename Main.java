@@ -190,11 +190,6 @@ public class Main {
     }
 
 
-
-
-
-
-
     File dirNewProject = new File(projectName);
 
     // cleaning directory
@@ -236,9 +231,40 @@ public class Main {
     if(createMVCDAODirs(dirNewProject)) {
       System.err.println("An error ocurred. Exiting.");
     }
-    
+ 
+    // creating project files
     System.out.println("Generating files...");
-    
+    for(ModelClass c: Classes) {
+      try( BufferedWriter fWriter = new BufferedWriter(new FileWriter("com." + projectName.toLowerCase() + ".model." + c.getClassName() ))) {
+        fWriter.write("package com." + projectName.toLowerCase() + ".model." + c.getClassName() + ";\n\n");
+        fWriter.write("public class " + c.getClassName() + " {\n");
+        for(Attribute attr : c.getAttributes()) {
+          fWriter.write("   private " + attr.getType() + " " + attr.getName() + ";\n");
+        }
+        
+        fWriter.newLine();
+
+        // getters
+        for(Attribute attr : c.getAttributes()) {
+          fWriter.write("   public " + attr.getType() + " get" + attr.getName().substring(0,1).toUpperCase() + attr.getName().substring(1) + "() {\n");
+          fWriter.write("   return " + attr.getName() + ";\n");
+          fWriter.write("}\n");
+        }
+        
+        // setters
+        for(Attribute attr : c.getAttributes()) {
+          fWriter.write("   public void set" + attr.getName().substring(0,1).toUpperCase() + attr.getName().substring(1) + "( " + attr.getType() + " " + attr.getName() + " ) {\n");
+          fWriter.write("   this." + attr.getName() + " = " + attr.getName() + ";\n");
+          fWriter.write("}\n");
+        }
+        
+        
+        fWriter.flush();
+
+      } catch(IOException e) {
+
+      }
+    }
 
 
     
