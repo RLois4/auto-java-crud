@@ -133,6 +133,8 @@ public class Main {
     System.out.println("---   The script will generate the class, attributes,   ---");
     System.out.println("---   getters & setters, and override toString method.  ---");
     System.out.println("|                                                         |");
+    System.out.println("|  The Last Attribute will be considered the primary key  |");
+    System.out.println("|                                                         |");
     System.out.println("| Obs1: If you use complex types like Lists, you must     |");
     System.out.println("|       import it.                                        |");
     System.out.println("- Obs2: Use exactly the spacing according to the example. -");
@@ -443,22 +445,63 @@ public class Main {
         fWriter.write("        String sql = \"INSERT INTO " + c.getClassName().toLowerCase() + " (" + attributes + ") VALUES (" + interrogations + ")\";\n");
         
         fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
+
         for(int i = 0; i < classAttributes.size(); i++) {
           fWriter.write("            pstmt.setObject(" + Integer.toString(i+1) + ", " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(i).getName().substring(0,1).toUpperCase() + classAttributes.get(i).getName().substring(1) + "());\n");
         }
+
         fWriter.write("            pstmt.executeUpdate();\n");
         fWriter.write("        }\n");
         fWriter.write("    }\n");
+        
         fWriter.newLine();
-      
-      
-    } catch(IOException e) {
-      System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
-      e.printStackTrace();
-      sc.close();
-      return;
+
+        // update method
+        fWriter.write("    public void update(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") throws SQLException {\n");
+        
+        attributes = classAttributes.get(0).getName() + " = ?";
+        for(int i = 1; i < classAttributes.size(); i++) {
+          attributes += ", " + classAttributes.get(i).getName() + " = ?";
+        }
+
+        fWriter.write("        String sql = \"UPDATE " + c.getClassName().toLowerCase() + " SET " + attributes + " WHERE id = ?\";\n");
+        fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
+
+        int tmp;
+        for(tmp = 0; tmp < classAttributes.size() - 1; tmp++) {
+          fWriter.write("            pstmt.setObject(" + Integer.toString(tmp+1) + ", " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(tmp).getName().substring(0,1).toUpperCase() + classAttributes.get(tmp).getName().substring(1) + "());\n");
+        }        
+        
+        fWriter.write("            pstmt.executeUpdate();\n");
+        fWriter.write("        }\n");
+        fWriter.write("    }\n");
+
+        fWriter.newLine();
+
+        // delete method
+        fWriter.write("    public void delete(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") throws SQLException {\n");
+        fWriter.write("        String sql = \"DELETE FROM " + c.getClassName().toLowerCase() + " WHERE " + classAttributes.get(classAttributes.size() - 1).getName() + " = ?\";\n");
+        fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
+        fWriter.write("            pstmt.setObject(1, " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(classAttributes.size() - 1).getName().substring(0,1).toUpperCase() + classAttributes.get(classAttributes.size() - 1).getName().substring(1) + "());\n");
+        fWriter.write("            pstmt.executeUpdate();\n");
+        fWriter.write("        }\n");
+        fWriter.write("    }\n");
+        
+
+          
+      } catch(IOException e) {
+        System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
+        e.printStackTrace();
+        sc.close();
+        return;
       }
+
+
+
+      
     }
+
+    
 /*
 
 // controllers
@@ -494,5 +537,12 @@ public class Main {
     }
 */
     sc.close();
+
+
+    System.out.println("Project generated successfully!");
+    System.out.println("1. Add the JDBC driver JAR file to the /lib folder.");
+    System.out.println("2. Check the update method in the DAO classes — replace id with your table's actual primary key.");
+    System.out.println("3. Create the database and start your MySQL server before running the application.");
+    System.out.println("4. Edit yout main method in /src/com/view/Main.java");
   }
 }
