@@ -425,7 +425,7 @@ public class Main {
         fWriter.newLine();
 
         fWriter.write("    public " + c.getClassName() + "DAO(Connection connection) {\n");
-        fWriter.write("        this.connection = connection;");
+        fWriter.write("        this.connection = connection;\n");
         fWriter.write("    }\n");
 
         fWriter.newLine();
@@ -459,15 +459,16 @@ public class Main {
         // update method
         fWriter.write("    public void update(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") throws SQLException {\n");
         
+
         attributes = classAttributes.get(0).getName() + " = ?";
-        for(int i = 1; i < classAttributes.size(); i++) {
-          attributes += ", " + classAttributes.get(i).getName() + " = ?";
+        int tmp;
+        for(int tmp = 1; tmp < classAttributes.size() - 1; tmp++) {
+          attributes += ", " + classAttributes.get(tmp).getName() + " = ?";
         }
 
-        fWriter.write("        String sql = \"UPDATE " + c.getClassName().toLowerCase() + " SET " + attributes + " WHERE id = ?\";\n");
+        fWriter.write("        String sql = \"UPDATE " + c.getClassName().toLowerCase() + " SET " + attributes + " WHERE " + classAttributes.get(tmp).getName() + " = ?\";\n");
         fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
-
-        int tmp;
+        
         for(tmp = 0; tmp < classAttributes.size() - 1; tmp++) {
           fWriter.write("            pstmt.setObject(" + Integer.toString(tmp+1) + ", " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(tmp).getName().substring(0,1).toUpperCase() + classAttributes.get(tmp).getName().substring(1) + "());\n");
         }        
@@ -486,7 +487,7 @@ public class Main {
         fWriter.write("            pstmt.executeUpdate();\n");
         fWriter.write("        }\n");
         fWriter.write("    }\n");
-        
+
 
           
       } catch(IOException e) {
