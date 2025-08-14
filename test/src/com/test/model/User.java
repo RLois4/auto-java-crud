@@ -1,27 +1,20 @@
-package com.proj.model;
+package com.test.model;
 
 public class User {
     private String name;
-    private int age;
 
 // getters
     public String getName() {
         return name;
-    }
-    public int getAge() {
-        return age;
     }
 
 // setters
     public void setName( String name ) {
         this.name = name;
     }
-    public void setAge( int age ) {
-        this.age = age;
-    }
 
     @Override
     public String toString() {
-        return "name -> " + getName() + "\n" + "age -> " + getAge() + "\n" + "";
+        return "name -> " + getName() + "\n" + "";
     }
 }

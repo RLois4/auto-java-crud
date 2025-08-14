@@ -213,22 +213,23 @@ public class Main {
     }
 
     String url, port, dbName, user, pass, driver;
-    System.out.println("Use the default options for connection with database? [Y/n]\n");
+    System.out.print("Use the default options for connection with database? [Y/n] ");
     String option = sc.nextLine();
-    if(option.toLowerCase() == "n") {
-      System.out.println("Leave the following questions in blank to use default:");
-      System.out.println("Enter url of the database, dont insert the port and last / (Defautl: jdbc:mysql://localhost) ->\n");
+    if(option.toLowerCase().equals("n")) {
+      System.out.println("Leave the following questions in blank to use default:\n");
+      System.out.print("Enter url of the database, dont insert the port and last / (Defautl: jdbc:mysql://localhost) -> ");
       url = sc.nextLine();
-      System.out.println("Enter the port of the database (Default: 3306) ->\n");
+      System.out.print("Enter the port of the database (Default: 3306) -> ");
       port = sc.nextLine();
-      System.out.println("Enter the databse name (Default: testDB)");
+      System.out.print("Enter the database name (Default: testDB) ->");
       dbName = sc.nextLine();
-      System.out.println("Enter the username (Default: root) ->\n");
+      System.out.print("Enter the username (Default: root) -> ");
       user = sc.nextLine();
-      System.out.println("Enter the pass of the user (Default: root) ->\n");
+      System.out.print("Enter the pass of the user (Default: root) -> ");
       pass = sc.nextLine();
-      System.out.println("Enter the driver class name (Default: com.mysql.cj.jdbc.Driver)");
+      System.out.print("Enter the driver class name (Default: com.mysql.cj.jdbc.Driver) -> ");
       driver = sc.nextLine();
+      
       if(url.isBlank()) url = "jdbc:mysql://localhost";
       if(port.isBlank()) port = "3306";
       if(dbName.isBlank()) dbName = "testDB";
@@ -249,7 +250,7 @@ public class Main {
 
     // cleaning directory
     if (dirNewProject.exists()) {
-      System.out.println("File or directory " + dirNewProject + " already exists, want to overwrite? [N/y]");
+      System.out.println("File or directory " + dirNewProject + " already exists, want to overwrite? [y/N]");
       String confirmation = sc.nextLine();
 
       if(!confirmation.equalsIgnoreCase("y")) {
@@ -276,7 +277,7 @@ public class Main {
       return;
     }
 
-    System.out.println("Create MVC + DAO structure? [n/Y]");
+    System.out.println("Create MVC + DAO structure? [Y/n]");
     String confirmation = sc.nextLine();
     if(confirmation.equalsIgnoreCase("n")) {
       System.out.println("Exiting. More structures not implemented yet.");
@@ -349,6 +350,7 @@ public class Main {
         System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
         e.printStackTrace();
         sc.close();
+        return;
       }
     }
 
@@ -364,43 +366,61 @@ public class Main {
         fWriter.write("import " + packToImport + ";\n");
       }
       fWriter.newLine();
-
-      fWriter.write("static {\n");
-      fWriter.write("    try {\n");
-      fWriter.write("        Class.forName(\"" + driver + "\");");
-      fWriter.write("    catch(ClassNotFoundException e) {\n");
-      fWriter.write("        e.printStackTrace()");
-      FWriter.write("        System.exit(1);");
-      fWriter.write("    }\n");
-      fWriter.write("}");
-
-      fWriter.write("public class DBConnetion {\n");
-      fWriter.write("    private static final String USER = \"" + user + "\";\n");
-      fWriter.write("    private static final String PASS = \"" + pass + "\";\n");
-      fWriter.write("    private static final String URL = \"" + url + ":" + port + "/" + dbName + "/\";\n");
+      
+      fWriter.write("public class DBConnection {\n");
       fWriter.newLine();
 
-      fWriter.write("   public static Connection getConnection() throws SQLException {\n");
-      fWriter.write("       return DriverManager.getConnection(URL, USER, PASSWORD);\n");
-      fWriter.write("   }\n");
+      fWriter.write("    static {\n");
+      fWriter.write("        try {\n");
+      fWriter.write("            Class.forName(\"" + driver + "\");\n");
+      fWriter.write("        } catch(ClassNotFoundException e) {\n");
+      fWriter.write("            e.printStackTrace();\n");
+      fWriter.write("            System.exit(1);\n");
+      fWriter.write("        }\n");
+      fWriter.write("    }\n");
 
+      fWriter.newLine();
 
+      fWriter.write("    private static final String USER = \"" + user + "\";\n");
+      fWriter.write("    private static final String PASSWORD = \"" + pass + "\";\n");
+      fWriter.write("    private static final String URL = \"" + url + ":" + port + "/" + dbName + "\";\n");
+      fWriter.newLine();
+
+      fWriter.write("    public static Connection getConnection() throws SQLException {\n");
+      fWriter.write("        return DriverManager.getConnection(URL, USER, PASSWORD);\n");
+      fWriter.write("    }\n");
+      fWriter.write("}\n");
+
+      fWriter.flush();
 
     } catch(IOException e) {
         System.err.println("An error occurred when generating Class DBConnection: " + e.getMessage());
         e.printStackTrace();
         sc.close();
+        return;
     }
 
     for(ModelClass c : Classes) {
       System.out.println("Creating " + "src/com/" + projectName.toLowerCase() + "/DAO/" + c.getClassName() + "DAO.java");
 
-      try(BufferedWriter fWriter = new BufferedWriter(new FileWriter(dirNewProject.getAbsolutePath() + "/src/com/" + projectName.toLowerCase() + "/DAO" + c.getClassName() + "DAO.java"))) {
+      try(BufferedWriter fWriter = new BufferedWriter(new FileWriter(dirNewProject.getAbsolutePath() + "/src/com/" + projectName.toLowerCase() + "/DAO/" + c.getClassName() + "DAO.java"))) {
+        
+        fWriter.write("package com." + projectName.toLowerCase() + ".DAO;\n");
+        fWriter.newLine();
+
+        String toImport[] = {"java.sql.Connection", "java.sql.PreparedStatement", "java.sql.ResultSet", "java.sql.SQLException", "com." + projectName.toLowerCase() + ".model." + c.getClassName() + "Model"};
+        for(String packToImport : toImport) {
+          fWriter.write("import " + packToImport + ";\n");
+        }
+        fWriter.newLine();
+
+
 
       } catch(IOException e) {
         System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
         e.printStackTrace();
         sc.close();
+        return;
       }
     }
 /*
