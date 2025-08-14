@@ -98,7 +98,7 @@ public class Main {
       MVC_DAOdefaultDirs.add("src/com/" + projectName.toLowerCase() + "/model");
       MVC_DAOdefaultDirs.add("src/com/" + projectName.toLowerCase() +"/controller");
       MVC_DAOdefaultDirs.add("src/com/" + projectName.toLowerCase() + "/view");
-      MVC_DAOdefaultDirs.add("src/com/" + projectName.toLowerCase() + "/dao");
+      MVC_DAOdefaultDirs.add("src/com/" + projectName.toLowerCase() + "/DAO");
       
       File dir;
       for(String dirName : MVC_DAOdefaultDirs) {
@@ -133,11 +133,13 @@ public class Main {
     System.out.println("---   The script will generate the class, attributes,   ---");
     System.out.println("---   getters & setters, and override toString method.  ---");
     System.out.println("|                                                         |");
-    System.out.println("- Obs: Use exactly the spacing according to the example.  -");
+    System.out.println("| Obs1: If you use complex types like Lists, you must     |");
+    System.out.println("|       import it.                                        |");
+    System.out.println("- Obs2: Use exactly the spacing according to the example. -");
     System.out.println("---------------------- Use 0 to exit ----------------------\n");
     System.out.println("Example: ");
     System.out.println("> Users: String name, int id");
-    System.out.println("> Book: int pages, String isbn, String tittle");
+    System.out.println("> Book: int pages, String isbn, String title");
     System.out.println("> 0");
     System.out.println("-----------------------------------------------------------\n");
     
@@ -153,11 +155,26 @@ public class Main {
         
       String inputSplit[] = input.split(":");
       if(inputSplit.length != 2) {
-        System.out.print("Error: invalid format. Try again:\n> ");
+        System.out.print("Error: invalid format. Try again:\n");
         continue;
       }
 
-      String className = inputSplit[0];
+      String className = inputSplit[0].trim();
+
+      String classNameSplit[] = className.split(" ");
+      if(classNameSplit.length != 1 || classNameSplit[0].isEmpty()) {
+        System.err.println("Don`t use space in Class name.");
+        continue;
+      }
+
+      className = classNameSplit[0];
+
+      if(!Character.isUpperCase(className.charAt(0))) {
+        System.err.println("Error: Classes name must be started with capital letters.");
+        continue;
+      }
+
+
       ModelClass newClass = new ModelClass(className);
           
       String attributes[] = inputSplit[1].split(",");
@@ -168,13 +185,19 @@ public class Main {
         String attrSplitted[] = attr.split(" ");
 
         if(attrSplitted.length != 2) {
+          System.out.print("Error: invalid format. Try again:\n> ");
           invalidAttributes = true;
           break;
         }
 
+        if(!Character.isLowerCase(attrSplitted[1].charAt(0))) {
+          System.err.println("Error: Attributes name must be started with lowercase letters.");
+        }
+
         newClass.addAttr(attrSplitted[0], attrSplitted[1]);
-        Classes.add(newClass);
       }
+
+      Classes.add(newClass);
 
       if(invalidAttributes) {
         System.out.print("Error: invalid format. Try again:\n> ");
@@ -189,6 +212,38 @@ public class Main {
       return;
     }
 
+    String url, port, dbName, user, pass, driver;
+    System.out.println("Use the default options for connection with database? [Y/n]\n");
+    String option = sc.nextLine();
+    if(option.toLowerCase() == "n") {
+      System.out.println("Leave the following questions in blank to use default:");
+      System.out.println("Enter url of the database, dont insert the port and last / (Defautl: jdbc:mysql://localhost) ->\n");
+      url = sc.nextLine();
+      System.out.println("Enter the port of the database (Default: 3306) ->\n");
+      port = sc.nextLine();
+      System.out.println("Enter the databse name (Default: testDB)");
+      dbName = sc.nextLine();
+      System.out.println("Enter the username (Default: root) ->\n");
+      user = sc.nextLine();
+      System.out.println("Enter the pass of the user (Default: root) ->\n");
+      pass = sc.nextLine();
+      System.out.println("Enter the driver class name (Default: com.mysql.cj.jdbc.Driver)");
+      driver = sc.nextLine();
+      if(url.isBlank()) url = "jdbc:mysql://localhost";
+      if(port.isBlank()) port = "3306";
+      if(dbName.isBlank()) dbName = "testDB";
+      if(user.isBlank()) user = "root";
+      if(pass.isBlank()) pass = "root";
+      if(driver.isBlank()) driver = "com.mysql.cj.jdbc.Driver";
+    } else {
+      url = "jdbc:mysql://localhost";
+      port = "3306";
+      dbName = "testDB";
+      user = "root";
+      pass = "root";
+      driver = "com.mysql.cj.jdbc.Driver";
+    }
+
 
     File dirNewProject = new File(projectName);
 
@@ -199,13 +254,13 @@ public class Main {
 
       if(!confirmation.equalsIgnoreCase("y")) {
         System.out.println("Exiting.");
+        sc.close();
+        return;
       } else {
         if(recursiveDelete(dirNewProject)) {
           System.out.println("Cannot delete " + dirNewProject + " recursively. Possibly permission problem.");
         } else {
           System.out.println("File " + dirNewProject + " deleted succesfully.");
-          sc.close();
-          return;
         }
       }
     }
@@ -225,49 +280,163 @@ public class Main {
     String confirmation = sc.nextLine();
     if(confirmation.equalsIgnoreCase("n")) {
       System.out.println("Exiting. More structures not implemented yet.");
+      sc.close();
+      return;
     }
+
+    System.out.println("Creating project with" + count + " classes.");
 
     System.err.println("Generating directories...");
     if(createMVCDAODirs(dirNewProject)) {
       System.err.println("An error ocurred. Exiting.");
+      sc.close();
+      return;
     }
  
     // creating project files
     System.out.println("Generating files...");
+
+    // model Classes
     for(ModelClass c: Classes) {
-      try( BufferedWriter fWriter = new BufferedWriter(new FileWriter("com." + projectName.toLowerCase() + ".model." + c.getClassName() ))) {
-        fWriter.write("package com." + projectName.toLowerCase() + ".model." + c.getClassName() + ";\n\n");
+
+      System.out.println("Creating " + "src/com/" + projectName.toLowerCase() + "/model/" + c.getClassName() + ".java");
+
+      try( BufferedWriter fWriter = new BufferedWriter(new FileWriter(dirNewProject.getAbsolutePath() + "/src/com/" + projectName.toLowerCase() + "/model/" + c.getClassName() + ".java"))) {
+        fWriter.write("package com." + projectName.toLowerCase() + ".model;\n\n");
         fWriter.write("public class " + c.getClassName() + " {\n");
         for(Attribute attr : c.getAttributes()) {
-          fWriter.write("   private " + attr.getType() + " " + attr.getName() + ";\n");
+          fWriter.write("    private " + attr.getType() + " " + attr.getName() + ";\n");
         }
         
         fWriter.newLine();
 
         // getters
+        fWriter.write("// getters\n");
         for(Attribute attr : c.getAttributes()) {
-          fWriter.write("   public " + attr.getType() + " get" + attr.getName().substring(0,1).toUpperCase() + attr.getName().substring(1) + "() {\n");
-          fWriter.write("   return " + attr.getName() + ";\n");
-          fWriter.write("}\n");
+          fWriter.write("    public " + attr.getType() + " get" + attr.getName().substring(0,1).toUpperCase() + attr.getName().substring(1) + "() {\n");
+          fWriter.write("        return " + attr.getName() + ";\n");
+          fWriter.write("    }\n");
         }
-        
+
+        fWriter.newLine();
+
         // setters
+        fWriter.write("// setters\n");
         for(Attribute attr : c.getAttributes()) {
-          fWriter.write("   public void set" + attr.getName().substring(0,1).toUpperCase() + attr.getName().substring(1) + "( " + attr.getType() + " " + attr.getName() + " ) {\n");
-          fWriter.write("   this." + attr.getName() + " = " + attr.getName() + ";\n");
-          fWriter.write("}\n");
+          fWriter.write("    public void set" + attr.getName().substring(0,1).toUpperCase() + attr.getName().substring(1) + "( " + attr.getType() + " " + attr.getName() + " ) {\n");
+          fWriter.write("        this." + attr.getName() + " = " + attr.getName() + ";\n");
+          fWriter.write("    }\n");
         }
+
+        fWriter.newLine();
         
-        
+        // @Override toString() method
+        fWriter.write("    @Override\n");
+        fWriter.write("    public String toString() {\n");
+        fWriter.write("        return ");
+
+        for (Attribute attr : c.getAttributes()) {
+          fWriter.write("\"" + attr.getName() + " -> \" + get" + attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1) + "()" + " + \"\\n\" + ");
+        }
+        fWriter.write("\"\";\n"); // for last '+'
+
+        fWriter.write("    }\n");
+        fWriter.write("}\n");
+
         fWriter.flush();
 
       } catch(IOException e) {
-
+        System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
+        e.printStackTrace();
+        sc.close();
       }
     }
 
+    // DAO Classes
+    System.out.println("Creating " + "src/com/" + projectName.toLowerCase() + "/DAO/DBConnection.java");
+    try(BufferedWriter fWriter = new BufferedWriter(new FileWriter(dirNewProject.getAbsolutePath() + "/src/com/" + projectName.toLowerCase() + "/DAO/DBConnection.java"))) {
+      
+      fWriter.write("package com." + projectName.toLowerCase() + ".DAO;\n");
+      fWriter.newLine();
 
-    
+      String toImport[] = {"java.sql.Connection", "java.sql.DriverManager", "java.sql.SQLException"};
+      for(String packToImport : toImport) {
+        fWriter.write("import " + packToImport + ";\n");
+      }
+      fWriter.newLine();
+
+      fWriter.write("static {\n");
+      fWriter.write("    try {\n");
+      fWriter.write("        Class.forName(\"" + driver + "\");");
+      fWriter.write("    catch(ClassNotFoundException e) {\n");
+      fWriter.write("        e.printStackTrace()");
+      FWriter.write("        System.exit(1);");
+      fWriter.write("    }\n");
+      fWriter.write("}");
+
+      fWriter.write("public class DBConnetion {\n");
+      fWriter.write("    private static final String USER = \"" + user + "\";\n");
+      fWriter.write("    private static final String PASS = \"" + pass + "\";\n");
+      fWriter.write("    private static final String URL = \"" + url + ":" + port + "/" + dbName + "/\";\n");
+      fWriter.newLine();
+
+      fWriter.write("   public static Connection getConnection() throws SQLException {\n");
+      fWriter.write("       return DriverManager.getConnection(URL, USER, PASSWORD);\n");
+      fWriter.write("   }\n");
+
+
+
+    } catch(IOException e) {
+        System.err.println("An error occurred when generating Class DBConnection: " + e.getMessage());
+        e.printStackTrace();
+        sc.close();
+    }
+
+    for(ModelClass c : Classes) {
+      System.out.println("Creating " + "src/com/" + projectName.toLowerCase() + "/DAO/" + c.getClassName() + "DAO.java");
+
+      try(BufferedWriter fWriter = new BufferedWriter(new FileWriter(dirNewProject.getAbsolutePath() + "/src/com/" + projectName.toLowerCase() + "/DAO" + c.getClassName() + "DAO.java"))) {
+
+      } catch(IOException e) {
+        System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
+        e.printStackTrace();
+        sc.close();
+      }
+    }
+/*
+
+// controllers
+    for(ModelClass c : Classes) {
+  
+
+      System.out.println("Creating " + "src/com/" + projectName.toLowerCase() + "/controller/" + c.getClassName() + "Controller.java");
+
+      try(BufferedWriter fWriter = new BufferedWriter(new FileWriter(dirNewProject.getAbsolutePath() + "/src/com/" + projectName.toLowerCase() + "/controller/" + c.getClassName() + "Controller" + ".java"))) {
+        fWriter.write("package com." + projectName.toLowerCase() + ".controller;\n\n");
+        fWriter.write("import com." + projectName.toLowerCase() + ".model." + c.getClassName() + ";\n");
+        fWriter.write("import com." + projectName.toLowerCase() + ".DAO." + c.getClassName() + "DAO;\n\n");
+        fWriter.write("public class " + c.getClassName() + "Controller {\n");
+        fWriter.write("    private final " + c.getClassName() + "DAO " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + "DAO;\n\n");
+
+        // create
+        fWriter.write("    public void create" + c.getClassName() + "(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n\n");
+        
+        fWriter.write("    }\n");
+        fWriter.write("    public void get" + c.getClassName() + "(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n\n");
+        fWriter.write("    }\n");
+        fWriter.write("    public void delete" + c.getClassName() + "(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n\n");
+        fWriter.write("    }\n");
+        fWriter.write("    public void update" + c.getClassName() + "(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n\n");
+        fWriter.write("    }\n");
+        fWriter.write("}\n");
+        
+      } catch(IOException e) {
+        System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
+        e.printStackTrace();
+        sc.close();
+      }
+    }
+*/
     sc.close();
   }
 }
