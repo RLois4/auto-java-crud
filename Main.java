@@ -185,7 +185,7 @@ public class Main {
         String attrSplitted[] = attr.split(" ");
 
         if(attrSplitted.length != 2) {
-          System.out.print("Error: invalid format. Try again:\n> ");
+          System.out.print("Error: invalid format. Try again:\n");
           invalidAttributes = true;
           break;
         }
@@ -200,7 +200,7 @@ public class Main {
       Classes.add(newClass);
 
       if(invalidAttributes) {
-        System.out.print("Error: invalid format. Try again:\n> ");
+        System.out.print("Error: invalid format. Try again:\n");
         continue;
       }         
       count++; 
@@ -408,19 +408,55 @@ public class Main {
         fWriter.write("package com." + projectName.toLowerCase() + ".DAO;\n");
         fWriter.newLine();
 
-        String toImport[] = {"java.sql.Connection", "java.sql.PreparedStatement", "java.sql.ResultSet", "java.sql.SQLException", "com." + projectName.toLowerCase() + ".model." + c.getClassName() + "Model"};
+        String toImport[] = {"java.sql.Connection", "java.sql.PreparedStatement", "java.sql.ResultSet", "java.sql.SQLException", "com." + projectName.toLowerCase() + ".model." + c.getClassName()};
+
         for(String packToImport : toImport) {
           fWriter.write("import " + packToImport + ";\n");
         }
+
+        fWriter.write("public class " + c.getClassName() + "DAO {\n");
+
         fWriter.newLine();
 
+        fWriter.write("    private Connection connection;\n");
 
+        fWriter.newLine();
 
-      } catch(IOException e) {
-        System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
-        e.printStackTrace();
-        sc.close();
-        return;
+        fWriter.write("    public " + c.getClassName() + "DAO(Connection connection) {\n");
+        fWriter.write("        this.connection = connection;");
+        fWriter.write("    }\n");
+
+        fWriter.newLine();
+
+        // insert method
+        List<Attribute> classAttributes = c.getAttributes();
+        String attributes = classAttributes.get(0).getName();
+        String interrogations = "?";
+        
+        for(int i=1; i<classAttributes.size(); i++) {
+          attributes += ", " + classAttributes.get(i).getName();
+          interrogations += ", ?";
+        }
+        
+        
+        fWriter.write("    public void insert(" + c.getClassName() + " " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ") throws SQLException {\n");
+        fWriter.write("        String sql = \"INSERT INTO " + c.getClassName().toLowerCase() + " (" + attributes + ") VALUES (" + interrogations + ")\";\n");
+        
+        fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
+        for(int i = 0; i < classAttributes.size(); i++) {
+          fWriter.write("            pstmt.setObject(" + Integer.toString(i+1) + ", " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(i).getName().substring(0,1).toUpperCase() + classAttributes.get(i).getName().substring(1) + "());\n");
+        }
+        fWriter.write("            pstmt.executeUpdate();\n");
+        fWriter.write("        }\n");
+        fWriter.write("    }\n");
+        fWriter.newLine();
+      
+      
+    } catch(IOException e) {
+      System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
+      e.printStackTrace();
+      sc.close();
+      return;
       }
     }
 /*
