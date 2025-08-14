@@ -462,7 +462,7 @@ public class Main {
 
         attributes = classAttributes.get(0).getName() + " = ?";
         int tmp;
-        for(int tmp = 1; tmp < classAttributes.size() - 1; tmp++) {
+        for(tmp = 1; tmp < classAttributes.size() - 1; tmp++) {
           attributes += ", " + classAttributes.get(tmp).getName() + " = ?";
         }
 
