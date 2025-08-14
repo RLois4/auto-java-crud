@@ -363,7 +363,7 @@ public class Main {
       fWriter.write("package com." + projectName.toLowerCase() + ".DAO;\n");
       fWriter.newLine();
 
-      String toImport[] = {"java.sql.Connection", "java.sql.DriverManager", "java.sql.SQLException"};
+      String toImport[] = {"java.sql.Connection", "java.sql.DriverManager", "java.sql.SQLException", "java.util.List", "java.util.ArrayList"};
       for(String packToImport : toImport) {
         fWriter.write("import " + packToImport + ";\n");
       }
@@ -457,22 +457,23 @@ public class Main {
         fWriter.newLine();
 
         // update method
-        fWriter.write("    public void update(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") throws SQLException {\n");
-        
+        fWriter.write("    public void update(" + c.getClassName() + " " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ") throws SQLException {\n");
 
         attributes = classAttributes.get(0).getName() + " = ?";
-        int tmp;
-        for(tmp = 1; tmp < classAttributes.size() - 1; tmp++) {
-          attributes += ", " + classAttributes.get(tmp).getName() + " = ?";
+        for(int i = 1; i < classAttributes.size() - 1; i++) {  // -1 para não incluir o PK
+          attributes += ", " + classAttributes.get(i).getName() + " = ?";
         }
 
-        fWriter.write("        String sql = \"UPDATE " + c.getClassName().toLowerCase() + " SET " + attributes + " WHERE " + classAttributes.get(tmp).getName() + " = ?\";\n");
+        fWriter.write("        String sql = \"UPDATE " + c.getClassName().toLowerCase() + " SET " + attributes + " WHERE " + classAttributes.get(classAttributes.size()-1).getName() + " = ?\";\n");
         fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
-        
-        for(tmp = 0; tmp < classAttributes.size() - 1; tmp++) {
-          fWriter.write("            pstmt.setObject(" + Integer.toString(tmp+1) + ", " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(tmp).getName().substring(0,1).toUpperCase() + classAttributes.get(tmp).getName().substring(1) + "());\n");
-        }        
-        
+
+        int tmp;
+        for(tmp = 0; tmp < classAttributes.size() - 1; tmp++) { // atributos normais
+          fWriter.write("            pstmt.setObject(" + (tmp+1) + ", " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(tmp).getName().substring(0,1).toUpperCase() + classAttributes.get(tmp).getName().substring(1) + "());\n");
+        }
+
+        fWriter.write("            pstmt.setObject(" + (tmp+1) + ", " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(classAttributes.size()-1).getName().substring(0,1).toUpperCase() + classAttributes.get(classAttributes.size()-1).getName().substring(1) + "());\n");
+
         fWriter.write("            pstmt.executeUpdate();\n");
         fWriter.write("        }\n");
         fWriter.write("    }\n");
@@ -488,6 +489,57 @@ public class Main {
         fWriter.write("        }\n");
         fWriter.write("    }\n");
 
+        fWriter.newLine();
+
+        // findAll method
+        fWriter.write("    public List<" + c.getClassName() + "> findAll() throws SQLException {\n");
+        fWriter.write("        List<" + c.getClassName() + "> list = new ArrayList<>();\n");
+        fWriter.write("        String sql = \"SELECT * FROM " + c.getClassName().toLowerCase() + "\";\n");
+        fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
+        fWriter.write("            ResultSet rs = pstmt.executeQuery();\n");
+        fWriter.write("            while(rs.next()) {\n");
+        fWriter.write("                " + c.getClassName() + " obj = new " + c.getClassName() + "();\n");
+
+        for(int i = 0; i < classAttributes.size(); i++) {
+            fWriter.write("                obj.set" + classAttributes.get(i).getName().substring(0,1).toUpperCase() + classAttributes.get(i).getName().substring(1) + "(rs.getObject(\"" + classAttributes.get(i).getName() + "\")" + ");\n");
+        }
+
+        fWriter.write("                list.add(obj);\n");
+        fWriter.write("            }\n");
+        fWriter.write("        }\n");
+        fWriter.write("        return list;\n");
+        fWriter.write("    }\n");
+
+        fWriter.newLine();
+
+        // findById method
+        fWriter.write("    public " + c.getClassName() + " findById(int id) throws SQLException {\n");
+        fWriter.write("        String sql = \"SELECT * FROM " + c.getClassName().toLowerCase() + " WHERE " + classAttributes.get(classAttributes.size()-1).getName() + " = ?\";\n");
+        fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
+        fWriter.write("            pstmt.setObject(1, id);\n");
+        fWriter.write("            ResultSet rs = pstmt.executeQuery();\n");
+        fWriter.write("            if(rs.next()) {\n");
+        fWriter.write("                " + c.getClassName() + " obj = new " + c.getClassName() + "();\n");
+
+        for(int i = 0; i < classAttributes.size(); i++) {
+            if(i != classAttributes.size() - 1) {
+                fWriter.write("                obj.set" + classAttributes.get(i).getName().substring(0,1).toUpperCase() + classAttributes.get(i).getName().substring(1) + "(rs.getObject(\"" + classAttributes.get(i).getName() + "\")" + ");\n");
+            }
+        }
+        // atribuir a PK por último
+        fWriter.write("                obj.set" + classAttributes.get(classAttributes.size()-1).getName().substring(0,1).toUpperCase() + classAttributes.get(classAttributes.size()-1).getName().substring(1) + "(rs.getObject(\"" + classAttributes.get(classAttributes.size()-1).getName() + "\")" + ");\n");
+      
+        fWriter.write("                return obj;\n");
+        fWriter.write("            } else {\n");
+        fWriter.write("                return null;\n");
+        fWriter.write("            }\n");
+        fWriter.write("        }\n");
+        fWriter.write("    }\n");
+      
+      
+
+        
+        fWriter.write("}\n");
 
           
       } catch(IOException e) {
