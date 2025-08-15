@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.sql.Connection;
 
 class Attribute {
   private String type;
@@ -289,7 +290,7 @@ public class Main {
 
     System.out.println("Creating project with" + count + " classes.");
 
-    System.err.println("Generating directories...");
+    System.err.println("Generating directories...\n");
     if(createMVCDAODirs(dirNewProject)) {
       System.err.println("An error ocurred. Exiting.");
       sc.close();
@@ -299,6 +300,7 @@ public class Main {
     // creating project files
     System.out.println("Generating files...");
 
+    System.out.println("Creating Model classes...\n");
     // model Classes
     for(ModelClass c: Classes) {
 
@@ -363,7 +365,7 @@ public class Main {
       fWriter.write("package com." + projectName.toLowerCase() + ".DAO;\n");
       fWriter.newLine();
 
-      String toImport[] = {"java.sql.Connection", "java.sql.DriverManager", "java.sql.SQLException", "java.util.List", "java.util.ArrayList"};
+      String toImport[] = {"java.sql.Connection", "java.sql.DriverManager", "java.sql.SQLException"};
       for(String packToImport : toImport) {
         fWriter.write("import " + packToImport + ";\n");
       }
@@ -402,6 +404,7 @@ public class Main {
         return;
     }
 
+    System.out.println("Creating DAO classes...\n");
     for(ModelClass c : Classes) {
       System.out.println("Creating " + "src/com/" + projectName.toLowerCase() + "/DAO/" + c.getClassName() + "DAO.java");
 
@@ -410,11 +413,14 @@ public class Main {
         fWriter.write("package com." + projectName.toLowerCase() + ".DAO;\n");
         fWriter.newLine();
 
-        String toImport[] = {"java.sql.Connection", "java.sql.PreparedStatement", "java.sql.ResultSet", "java.sql.SQLException", "com." + projectName.toLowerCase() + ".model." + c.getClassName()};
+        String toImport[] = {"java.sql.Connection", "java.sql.PreparedStatement", "java.sql.ResultSet", "java.sql.SQLException", "java.util.List", "java.util.ArrayList", "com." + projectName.toLowerCase() + ".model." + c.getClassName()};
 
         for(String packToImport : toImport) {
           fWriter.write("import " + packToImport + ";\n");
         }
+
+        fWriter.newLine();
+        fWriter.newLine();
 
         fWriter.write("public class " + c.getClassName() + "DAO {\n");
 
@@ -457,28 +463,31 @@ public class Main {
         fWriter.newLine();
 
         // update method
-        fWriter.write("    public void update(" + c.getClassName() + " " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ") throws SQLException {\n");
+        if(classAttributes.size() >= 2) {
 
-        attributes = classAttributes.get(0).getName() + " = ?";
-        for(int i = 1; i < classAttributes.size() - 1; i++) {  // -1 para não incluir o PK
-          attributes += ", " + classAttributes.get(i).getName() + " = ?";
+          fWriter.write("    public void update(" + c.getClassName() + " " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ") throws SQLException {\n");
+          
+          attributes = classAttributes.get(0).getName() + " = ?";
+          for(int i = 1; i < classAttributes.size() - 1; i++) {
+            attributes += ", " + classAttributes.get(i).getName() + " = ?";
+          }
+          
+          fWriter.write("        String sql = \"UPDATE " + c.getClassName().toLowerCase() + " SET " + attributes + " WHERE " + classAttributes.get(classAttributes.size()-1).getName() + " = ?\";\n");
+          fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
+          
+          int tmp;
+          for(tmp = 0; tmp < classAttributes.size() - 1; tmp++) {
+            fWriter.write("            pstmt.setObject(" + (tmp+1) + ", " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(tmp).getName().substring(0,1).toUpperCase() + classAttributes.get(tmp).getName().substring(1) + "());\n");
+          }
+          
+          fWriter.write("            pstmt.setObject(" + (tmp+1) + ", " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(classAttributes.size()-1).getName().substring(0,1).toUpperCase() + classAttributes.get(classAttributes.size()-1).getName().substring(1) + "());\n");
+
+          fWriter.write("            pstmt.executeUpdate();\n");
+          fWriter.write("        }\n");
+          fWriter.write("    }\n");
+          
+          fWriter.newLine();
         }
-
-        fWriter.write("        String sql = \"UPDATE " + c.getClassName().toLowerCase() + " SET " + attributes + " WHERE " + classAttributes.get(classAttributes.size()-1).getName() + " = ?\";\n");
-        fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
-
-        int tmp;
-        for(tmp = 0; tmp < classAttributes.size() - 1; tmp++) { // atributos normais
-          fWriter.write("            pstmt.setObject(" + (tmp+1) + ", " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(tmp).getName().substring(0,1).toUpperCase() + classAttributes.get(tmp).getName().substring(1) + "());\n");
-        }
-
-        fWriter.write("            pstmt.setObject(" + (tmp+1) + ", " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + ".get" + classAttributes.get(classAttributes.size()-1).getName().substring(0,1).toUpperCase() + classAttributes.get(classAttributes.size()-1).getName().substring(1) + "());\n");
-
-        fWriter.write("            pstmt.executeUpdate();\n");
-        fWriter.write("        }\n");
-        fWriter.write("    }\n");
-
-        fWriter.newLine();
 
         // delete method
         fWriter.write("    public void delete(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") throws SQLException {\n");
@@ -491,8 +500,8 @@ public class Main {
 
         fWriter.newLine();
 
-        // findAll method
-        fWriter.write("    public List<" + c.getClassName() + "> findAll() throws SQLException {\n");
+        // listAll method
+        fWriter.write("    public List<" + c.getClassName() + "> listAll() throws SQLException {\n");
         fWriter.write("        List<" + c.getClassName() + "> list = new ArrayList<>();\n");
         fWriter.write("        String sql = \"SELECT * FROM " + c.getClassName().toLowerCase() + "\";\n");
         fWriter.write("        try(PreparedStatement pstmt = connection.prepareStatement(sql)) {\n");
@@ -526,7 +535,7 @@ public class Main {
                 fWriter.write("                obj.set" + classAttributes.get(i).getName().substring(0,1).toUpperCase() + classAttributes.get(i).getName().substring(1) + "(rs.getObject(\"" + classAttributes.get(i).getName() + "\")" + ");\n");
             }
         }
-        // atribuir a PK por último
+
         fWriter.write("                obj.set" + classAttributes.get(classAttributes.size()-1).getName().substring(0,1).toUpperCase() + classAttributes.get(classAttributes.size()-1).getName().substring(1) + "(rs.getObject(\"" + classAttributes.get(classAttributes.size()-1).getName() + "\")" + ");\n");
       
         fWriter.write("                return obj;\n");
@@ -549,53 +558,139 @@ public class Main {
         return;
       }
 
-
-
-      
     }
 
     
-/*
 
-// controllers
+    System.out.println("Creating Controllers classes...\n");
+    // controllers
     for(ModelClass c : Classes) {
   
-
       System.out.println("Creating " + "src/com/" + projectName.toLowerCase() + "/controller/" + c.getClassName() + "Controller.java");
 
       try(BufferedWriter fWriter = new BufferedWriter(new FileWriter(dirNewProject.getAbsolutePath() + "/src/com/" + projectName.toLowerCase() + "/controller/" + c.getClassName() + "Controller" + ".java"))) {
-        fWriter.write("package com." + projectName.toLowerCase() + ".controller;\n\n");
-        fWriter.write("import com." + projectName.toLowerCase() + ".model." + c.getClassName() + ";\n");
-        fWriter.write("import com." + projectName.toLowerCase() + ".DAO." + c.getClassName() + "DAO;\n\n");
+        fWriter.write("package com." + projectName.toLowerCase() + ".controller;\n");
+
+        fWriter.newLine();
+ 
+        String toImport[] = {"java.sql.SQLException", "java.util.List", "com." + projectName.toLowerCase() + ".DAO." + c.getClassName() + "DAO", "com." + projectName.toLowerCase() + ".model." + c.getClassName()};
+
+        for(String packToImport : toImport) {
+          fWriter.write("import " + packToImport + ";\n");
+        }
+
+        fWriter.newLine();
+        fWriter.newLine();
+
+        // constructor
         fWriter.write("public class " + c.getClassName() + "Controller {\n");
         fWriter.write("    private final " + c.getClassName() + "DAO " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + "DAO;\n\n");
 
-        // create
-        fWriter.write("    public void create" + c.getClassName() + "(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n\n");
+        fWriter.write("    public " + c.getClassName() + "Controller(Connection connection) {\n");
+        fWriter.write("        this." + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + "DAO = new " + c.getClassName() + "DAO(connection);\n");
+        fWriter.write("    }\n");
+
+        fWriter.newLine();
+
+        // insert method
+        fWriter.write("    public void insert(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n");
+        fWriter.write("        try {\n");
+        fWriter.write("            " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + "DAO.insert(" + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ");\n");
+        fWriter.write("        } catch(SQLException e) {\n");
+        fWriter.write("            e.printStackTrace();\n");
+        fWriter.write("        }\n");
+        fWriter.write("    }\n");
+  
+        fWriter.newLine();
+
+        // update method
+        fWriter.write("    public void update(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n");
+        fWriter.write("        try {\n");
+        fWriter.write("            " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + "DAO.update(" + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ");\n");
+        fWriter.write("        } catch(SQLException e) {\n");
+        fWriter.write("            e.printStackTrace();\n");
+        fWriter.write("        }\n");
+        fWriter.write("    }\n");
+  
+        fWriter.newLine();
+
+        // delete method
+        fWriter.write("    public void delete(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n");
+        fWriter.write("        try {\n");
+        fWriter.write("            " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + "DAO.delete(" + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ");\n");
+        fWriter.write("        } catch(SQLException e) {\n");
+        fWriter.write("            e.printStackTrace();\n");
+        fWriter.write("        }\n");
+        fWriter.write("    }\n");
+  
+        fWriter.newLine();
+
+        // listAll method
+        fWriter.write("    public List<" + c.getClassName() + "> listAll() {\n");
+        fWriter.write("        try {\n");
+        fWriter.write("            return " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + "DAO.listAll();\n");
+        fWriter.write("        } catch(SQLException e) {\n");
+        fWriter.write("            e.printStackTrace();\n");
+        fWriter.write("            return null;\n");
+        fWriter.write("        }\n");
+        fWriter.write("    }\n");
+  
+        fWriter.newLine();
+
+        // findByID method
+        List<Attribute> classAttributes = c.getAttributes();
+        fWriter.write("    public " + c.getClassName() + " findById(" + classAttributes.get(classAttributes.size() - 1).getType() + " " + classAttributes.get(classAttributes.size() - 1).getName() + ") {\n");
+        fWriter.write("        try {\n");
+        fWriter.write("            return " + c.getClassName().substring(0,1).toLowerCase() + c.getClassName().substring(1) + "DAO.findById(" + classAttributes.get(classAttributes.size() - 1).getName() + ");\n");
+        fWriter.write("        } catch(SQLException e) {\n");
+        fWriter.write("            e.printStackTrace();\n");
+        fWriter.write("            return null;\n");
+        fWriter.write("        }\n");
+        fWriter.write("    }\n");
         
-        fWriter.write("    }\n");
-        fWriter.write("    public void get" + c.getClassName() + "(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n\n");
-        fWriter.write("    }\n");
-        fWriter.write("    public void delete" + c.getClassName() + "(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n\n");
-        fWriter.write("    }\n");
-        fWriter.write("    public void update" + c.getClassName() + "(" + c.getClassName() + " " + c.getClassName().substring(0, 1).toLowerCase() + c.getClassName().substring(1) + ") {\n\n");
-        fWriter.write("    }\n");
         fWriter.write("}\n");
-        
+
       } catch(IOException e) {
         System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
         e.printStackTrace();
         sc.close();
       }
     }
-*/
+
+    // Main in view
+    try(BufferedWriter fWriter = new BufferedWriter(new FileWriter(dirNewProject.getAbsolutePath() + "/src/com/" + projectName.toLowerCase() + "/view/Main.java"))) {
+      fWriter.write("package com." + projectName.toLowerCase() + ".view;\n");
+
+      fWriter.newLine();
+
+      String toImport[] = {"java.sql.SQLException", "java.sql.DriverManager", "java.sql.Connection", "java.util.List", "com." + projectName.toLowerCase() + ".DAO.*", "com." + projectName.toLowerCase() + ".model.*"};
+
+      for(String packToImport : toImport) {
+        fWriter.write("import " + packToImport + ";\n");
+      }
+
+      fWriter.newLine();
+      fWriter.newLine();
+
+      fWriter.write("public class Main {\n");
+      fWriter.write("    private static Connection connection;\n");
+      fWriter.write("    private static Scanner scanner = new Scanner(System.in);\n");
+
+      fWriter.newLine();
+
+
+    } catch(IOException e) {
+      System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
+      e.printStackTrace();
+      sc.close();
+    }
+
     sc.close();
 
 
-    System.out.println("Project generated successfully!");
+    System.out.println("\n\n * Project generated successfully! *\n");
     System.out.println("1. Add the JDBC driver JAR file to the /lib folder.");
-    System.out.println("2. Check the update method in the DAO classes — replace id with your table's actual primary key.");
-    System.out.println("3. Create the database and start your MySQL server before running the application.");
-    System.out.println("4. Edit yout main method in /src/com/view/Main.java");
+    System.out.println("2. Create the database and start your MySQL server before running the application.");
+    System.out.println("3. Edit yout main method in /src/com/view/Main.java");
   }
 }
