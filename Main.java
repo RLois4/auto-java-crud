@@ -10,7 +10,6 @@ import java.io.File;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.Connection;
 
 class Attribute {
   private String type;
@@ -680,7 +679,7 @@ public class Main {
 
 
     } catch(IOException e) {
-      System.err.println("An error occurred when generating Class " + c.getClassName() + ": " + e.getMessage());
+      System.err.println("An error occurred when generating Class Main: " + e.getMessage());
       e.printStackTrace();
       sc.close();
     }
