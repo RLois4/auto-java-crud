@@ -1,21 +1,24 @@
-class ClassDefinition {
-  private List<Attribute> attributes = new ArrayList<>();
-  private String className;
+package com.application;
 
-  public ModelClass(String className) {
-    this.className = className;
+class ClassDefinition {
+  private AttributeArray attributes = new AttributeArray();
+  private String name;
+
+
+  public ClassDefinition(String name) {
+    this.name = name;
   }
 
   public void addAttr(String type, String attrName) {
-    Attribute att = new Attribute(type, attrName);
-    attributes.add(att);
+    Attribute attr = new Attribute(type, attrName);
+    attributes.add(attr);
   }
 
-  public String getClassName() {
-    return className;
+  public String getName() {
+    return name;
   }
 
-  public List<Attribute> getAttributes() {
+  public AttributeArray getAttributes() {
     return attributes;
   }
 }

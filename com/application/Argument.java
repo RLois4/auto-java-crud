@@ -1,10 +1,10 @@
 package com.application;
 
-class Attribute {
+class Argument {
   private String type;
   private String name;
  
-  public Attribute(String type, String name) {
+  public Argument(String type, String name) {
     this.type = type;
     this.name = name;
   }

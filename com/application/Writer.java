@@ -11,7 +11,6 @@ public class Writer {
     
   private final static String lb = System.lineSeparator();
 
-
   public void writePackage(String path, String classPackage) throws IOException {
     try(BufferedWriter bw = new BufferedWriter(new FileWriter(path))) {
       StringBuilder sb = new StringBuilder();
@@ -20,17 +19,14 @@ public class Writer {
     }
   }
 
-
   public void writeImport(String path, String[] toImport, String tabValue, int identationLevel) throws IOException {
     if(identationLevel < 0) {
       System.err.println("Error: writeImport(): identation level cannot be negative.");
       return;
     }
-
     if(!tabValue.isBlank()) {
       System.err.println("Warning: the identation String have not common characters.");
     }
-
     try(BufferedWriter bw = new BufferedWriter(new FileWriter(path))) {
       StringBuilder sb = new StringBuilder();
       for(String packageToImport: toImport) {
